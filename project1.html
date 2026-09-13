@@ -15,7 +15,6 @@
         <nav>
             <p></p>
             <ul>
-                <li><a href="index.html"> Home</a></li>
                 <li><a href="cs180.html"> All Projects</a></li>
             </ul>
         </nav>
@@ -25,8 +24,166 @@
 <div id="cs180-content">
     <div class="container">
         <a href="cs180.html" class="btn">&larr; Back to Projects</a>
-        <h1 class="sub-title">Project 1: Title Here</h1>
-        <p class="intro">Coming soon.</p>
+        <h1 class="sub-title">Project 1: Colorizing the Prokudin-Gorskii Photo Collection</h1>
+    
+        <section class="project-section">
+            <h2>Overview</h2>
+            <p>In the early 20th Century, Sergei Mikhailovich Prokudin-Gorskii photographed the Russian Empire by capturing three
+                separate black-and-white exposures of the same scene, each through a different color filter (red, green, and
+                blue). He believed that by projecting all three through matching filters, he could reconstruct a full-color image. 
+                Today, those images stored in the Library of Congress give us a unique colored picture of life in the Russian Empire..</p>
+            <p>As a CS 180 student, my goal here was to use python to automate the alignment process for the different color channels to create a full-color 
+                image. This was achieved through a combination of brute-force and image pyramids.</p>
+        </section>
+
+        <section class="project-section">
+            <h2>Part 1: Single-Scale Alignment</h2>
+            <p>For the smaller JPEG-scanned plates, a simple brute-force search was good enough. For every possible
+                displacement <code>(dx, dy)</code> in the range <code>[-15, 15]</code>, I shifted the channel being aligned using
+                <code>np.roll</code> and scored the shift using the frobenius norm between the shifted channel and the fixed blue channel. 
+                To ensure borders didn't affect the L2 norm score, I cropped a 15-pixel border off of both channels before computing the score.</p>
+            <p>Below are three examples run through this single-scale search. On the left is the naive result of stacking the
+                raw channels with no alignment at all; on the right is the result after searching for the best offset.</p>
+            <div class="project-images compare">
+                <figure>
+                    <img src="images/proj1/cathedral_naive.jpg" alt="">
+                    <figcaption>Cathedral &mdash; unaligned</figcaption>
+                </figure>
+                <figure>
+                    <img src="images/proj1/cathedral_aligned.jpg" alt="">
+                    <figcaption>Cathedral &mdash; aligned (G: (5, 2), R: (0, 3))</figcaption>
+                </figure>
+            </div>
+            <div class="project-images compare">
+                <figure>
+                    <img src="images/proj1/monastery_naive.jpg" alt="">
+                    <figcaption>Monastery &mdash; unaligned</figcaption>
+                </figure>
+                <figure>
+                    <img src="images/proj1/monastery_aligned.jpg" alt="">
+                    <figcaption>Monastery &mdash; aligned (G: (-3, 2), R: (3, 2))</figcaption>
+                </figure>
+            </div>
+            <div class="project-images compare">
+                <figure>
+                    <img src="images/proj1/tobolsk_naive.jpg" alt="">
+                    <figcaption>Tobolsk &mdash; unaligned</figcaption>
+                </figure>
+                <figure>
+                    <img src="images/proj1/tobolsk_aligned.jpg" alt="">
+                    <figcaption>Tobolsk &mdash; aligned (G: (3, 2), R: (6, 3))</figcaption>
+                </figure>
+            </div>
+        </section>
+
+        <section class="project-section">
+            <h2>Part 2: Image Pyramid</h2>
+            <p>While brute-force search worked well for the smaller jpeg images, it was not suitable for the larger full-resolution scans,
+                which were often 3600 pixels wide. To speed things up, I used the image pyramid techniques learned in CS 180. 
+                Rather than running brute force and L2 norm on the entire image, we store successively more downscaled images of 
+                the original (5 levels in this case) and run brute force search on the lower levels to reduce the search space in 
+                the higher resolution layers. In this specific case, I used the <code>skimage.transform.rescale</code> function to 
+                downscale the image 4 times by a factor of 2. Then, beginning at the lowest resolution layer, I ran a 30-pixel wide 
+                search with the L2 norm and used the location on the next layer but decreasing the search window by 6 pixels each time.
+                This allowed the images to be aligned in just seconds.<p>
+            <p>The sequence below illustrates this on the <code>Na ostrovi︠e︡ Kapri</code> plate, showing the composite image at three levels
+                of the pyramid, from coarsest to finest. Notice how the color fringing is large and blurry at the coarsest level,
+                gets progressively smaller as the pyramid refines, and disappears almost entirely by the time the search reaches
+                full resolution.</p>
+            <div class="project-images large">
+                <figure>
+                    <img src="images/proj1/child_4.jpg" alt="">
+                    <figcaption>Coarsest level (203&times;238) &mdash; G: (2, -1), R: (6, -1)</figcaption>
+                </figure>
+                <figure>
+                    <img src="images/proj1/child_3.jpg" alt="">
+                    <figcaption>One level finer (406&times;477) &mdash; G: (5, -1), R: (13, -1)</figcaption>
+                </figure>
+                <figure>
+                    <img src="images/proj1/child_0.jpg" alt="">
+                    <figcaption>Full resolution (3251&times;3817) &mdash; G: (40, -12), R: (102, -10)</figcaption>
+                </figure>
+            </div>
+        </section>
+
+        <section class="project-section">
+            <h2>Final Gallery</h2>
+            <p>Running the pyramid alignment on every plate in the collection produces the following colorized results. Notice that the image of the Emir 
+                remains misaligned. This is because the Emir's garments are largely blue, making the L2 norm balloon when scoring based on the intensity 
+                of color in each filter. One way to circumvent this issue would be to use the sobel filter, but that is in the bells and whistles section
+                of the project, which wasn't implemented here.
+            </p>
+            <div class="project-images">
+                <figure>
+                    <img src="images/proj1/cathedral_aligned.jpg" alt="">
+                    <figcaption>Cathedral</figcaption>
+                </figure>
+                <figure>
+                    <img src="images/proj1/monastery_aligned.jpg" alt="">
+                    <figcaption>Monastery</figcaption>
+                </figure>
+                <figure>
+                    <img src="images/proj1/tobolsk_aligned.jpg" alt="">
+                    <figcaption>Tobolsk</figcaption>
+                </figure>
+                <figure>
+                    <img src="images/proj1/child_aligned.jpg" alt="">
+                    <figcaption>Child</figcaption>
+                </figure>
+                <figure>
+                    <img src="images/proj1/brick_aligned.jpg" alt="">
+                    <figcaption>Brick</figcaption>
+                </figure>
+                <figure>
+                    <img src="images/proj1/church_aligned.jpg" alt="">
+                    <figcaption>Church</figcaption>
+                </figure>
+                <figure>
+                    <img src="images/proj1/emir_aligned.jpg" alt="">
+                    <figcaption>Emir of Bukhara</figcaption>
+                </figure>
+                <figure>
+                    <img src="images/proj1/harvesters_aligned.jpg" alt="">
+                    <figcaption>Harvesters</figcaption>
+                </figure>
+                <figure>
+                    <img src="images/proj1/icon_aligned.jpg" alt="">
+                    <figcaption>Icon</figcaption>
+                </figure>
+                <figure>
+                    <img src="images/proj1/ilemselga_aligned.jpg" alt="">
+                    <figcaption>Ilemselga</figcaption>
+                </figure>
+                <figure>
+                    <img src="images/proj1/khan_aligned.jpg" alt="">
+                    <figcaption>Khan</figcaption>
+                </figure>
+                <figure>
+                    <img src="images/proj1/melons_aligned.jpg" alt="">
+                    <figcaption>Melons</figcaption>
+                </figure>
+                <figure>
+                    <img src="images/proj1/religous_painting_aligned.jpg" alt="">
+                    <figcaption>Religious Painting</figcaption>
+                </figure>
+                <figure>
+                    <img src="images/proj1/self_portrait_aligned.jpg" alt="">
+                    <figcaption>Self Portrait</figcaption>
+                </figure>
+                <figure>
+                    <img src="images/proj1/siren_aligned.jpg" alt="">
+                    <figcaption>Siren</figcaption>
+                </figure>
+                <figure>
+                    <img src="images/proj1/three_generations_aligned.jpg" alt="">
+                    <figcaption>Three Generations</figcaption>
+                </figure>
+                <figure>
+                    <img src="images/proj1/wharf_aligned.jpg" alt="">
+                    <figcaption>Wharf</figcaption>
+                </figure>
+            </div>
+        </section>
     </div>
 </div>
 
